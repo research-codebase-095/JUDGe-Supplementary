@@ -1,0 +1,2 @@
+data/logit_cache_imagenet1k_resnet50.pt filter=lfs diff=lfs merge=lfs -text
+data/mahalanobis_feature_cache_resnet50.pt filter=lfs diff=lfs merge=lfs -text
