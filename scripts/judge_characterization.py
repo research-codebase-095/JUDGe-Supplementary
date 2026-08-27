@@ -36,8 +36,10 @@ Sections:
           different feature than Table 1 at Qwen2.5-1.5B-judge (entropy vs.
           MSP, a near-tie) even though no rounded rate in this table changed.
   E. Swap/order-effect analysis on judge_swap_consistency_cache.pt (0.5B
-     only - swap-consistency was never run for 1.5B or SmolLM2, and per
-     GAP 1's own instruction for this section, is not being re-run now):
+     only. Swap-consistency itself is also collected and analyzed for 1.5B
+     elsewhere in this paper - a headline finding, AUROC 0.583, sixth-signal
+     boost 0.673->0.728 - but this specific signal-disagreement breakdown has
+     only been run at 0.5B here; it was never run for SmolLM2 at all):
        (i) swap-consistency rate by MSP confidence decile,
        (ii) swap-consistency rate under the same signal-disagreement rule
             as D.3, compared across disagreement/no-disagreement groups,
@@ -498,9 +500,10 @@ def section_e() -> None:
     point, lo, hi = cluster_bootstrap_auroc(qid, correct, swap_consistent)
     print(f"point={point:.4f}  95% CI=[{lo:.4f}, {hi:.4f}]")
     print()
-    print("NOTE: this analysis exists ONLY for the 0.5B judge - swap-consistency was never collected for the "
-          "1.5B or SmolLM2 configs, so whether order-sensitivity interacts with judge model/size is UNRESOLVED "
-          "by the available data, not merely unreported.")
+    print("NOTE: this specific signal-disagreement-vs-swap-consistency breakdown was only run for the 0.5B judge "
+          "here. Swap-consistency itself IS collected and analyzed for 1.5B elsewhere in this paper (a headline "
+          "finding: AUROC 0.583, sixth-signal boost 0.673->0.728). It was never collected for SmolLM2, so whether "
+          "order-sensitivity interacts with judge model/size beyond the two tested Qwen sizes remains untested.")
     print()
 
 
