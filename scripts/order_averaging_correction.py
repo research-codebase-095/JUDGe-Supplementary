@@ -94,6 +94,16 @@ def main() -> None:
     expected_total_acc = (agree_acc_contribution + expected_coinflip_correct) / n
     print(f"  Variant 3 (agreement + symmetric coin-flip on disagreement): expected accuracy = {expected_total_acc:.4f} "
           f"(closed-form: ({agree_acc_contribution:.0f} agreement-correct + {expected_coinflip_correct:.1f} expected coin-flip-correct) / {n})")
+
+    id_test_mask = splits == "id_test"
+    n_id_test = id_test_mask.sum()
+    agree_acc_contribution_id_test = correct_orig[swap_consistent & id_test_mask].sum()
+    disagree_n_id_test = (~swap_consistent & id_test_mask).sum()
+    expected_coinflip_correct_id_test = 0.5 * disagree_n_id_test
+    expected_total_acc_id_test = (agree_acc_contribution_id_test + expected_coinflip_correct_id_test) / n_id_test
+    print(f"  Variant 3, id_test-only (agreement + symmetric coin-flip on disagreement): expected accuracy = "
+          f"{expected_total_acc_id_test:.4f} (closed-form: ({agree_acc_contribution_id_test:.0f} agreement-correct + "
+          f"{expected_coinflip_correct_id_test:.1f} expected coin-flip-correct) / {n_id_test})")
     print()
 
     print("=== Interpretation ===")

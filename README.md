@@ -8,15 +8,23 @@ the provided caches without rerunning model inference.
 
 Maps every table and headline number in the paper to the exact command that
 produced it and the file (or cache) that command reads/writes. Organized in
-paper order. Every command below was actually run against the shipped
-`data/*.pt` caches while preparing this file (Python 3.12, `pip install -r
+paper order. Every analysis command below (i.e. every command in this file's
+tables except the `collect_*.py` inference scripts, addressed separately in
+the Seeds paragraph below) was actually re-run against the shipped
+`data/*.pt` caches while preparing this revision (Python 3.12, `pip install -r
 requirements-dev.txt`); all outputs matched the paper's reported numbers
-exactly, to the precision the paper reports them.
+exactly, to the precision the paper reports them. Two entries below were
+updated in this revision to reflect an upstream fix to a selection-leak bug
+in `best_single_feature()` and related functions (reusing the pooled
+bootstrap-stabilized sign instead of a fresh `id_test`-based direction call):
+`question_level_resplit.py`'s reported numbers changed as a result, and
+`best_feature_selected_on_cal.py`'s table description was relabeled as
+historical/superseded rather than describing Table 1's current protocol.
 
 ## Structure
 
 ```
-scripts/     Analysis and data-collection scripts (60 files)
+scripts/     Analysis and data-collection scripts (62 files)
 src/         The `deployment_reliability` package: signal extraction (Phi),
              combiner (G_w), router (R_tau), calibration, significance tests
 tests/       Unit tests for src/deployment_reliability
@@ -51,9 +59,12 @@ reproduce the already-cached numbers up to floating-point noise, not
 necessarily bit-for-bit; every analysis script below performs **no new
 inference** and reads the shipped caches directly, so its output is exact.
 
-**Build verification:** `pytest -q` from the repo root passes 275/275 (3
-skipped pending optional large downloads: ImageNet-A/O, full ImageNet-1k val)
-against a fresh `pip install -r requirements-dev.txt`.
+**Build verification:** `pytest -q` from the repo root, against a fresh `pip
+install -r requirements-dev.txt` with no vision datasets downloaded yet,
+passes 273/278, with 5 skipped pending optional large downloads: ImageNet-A/O,
+full ImageNet-1k val, and Imagenette (the last of these gates 2 of the 5 -
+`tests/test_temporal.py`'s real-ResNet-50 corruption-ramp tests - which now
+skip rather than fail when `data/imagenette2-160/val` is absent).
 
 ## Section 3 (Method) - the &Phi; verdict-token restriction
 
@@ -69,7 +80,7 @@ against a fresh `pip install -r requirements-dev.txt`.
 | `python scripts/paper_diagnostics.py` | stdout §1 - **Table 1's exact headline row**: MSP, best single feature, combiner AUROC, comb-best diff, DeLong p, winner, for ResNet-50/GPT-2/Pythia-160m/Qwen2.5-0.5B(LLM)/Qwen2.5-0.5B(judge) |
 | `python scripts/judge_characterization.py` | stdout §A/§B - Table 1/2's judge rows via question-id cluster-bootstrap CI, all 3 judge configs incl. the non-confirmatory SmolLM2-360M row |
 | `python scripts/paper_ablation_and_effect_size.py` | stdout - **Table 2 exactly**: all 5 oriented single-feature AUROCs + combiner, per backbone, plus combiner-vs-MSP paired-bootstrap CI |
-| `python scripts/best_feature_selected_on_cal.py` | stdout - the disjoint select-on-`threshold_cal`/report-on-`id_test` protocol Table 1 uses for "best single signal" |
+| `python scripts/best_feature_selected_on_cal.py` | stdout - historical/superseded: demonstrates a single-draw select-on-`threshold_cal`-alone protocol (n=128/40) for "best single signal," one of three earlier approaches `judge_characterization.py`'s `best_single_feature()` docstring says it replaced; Table 1/2 now select via a pooled bootstrap-majority vote over `combiner_fit`+`threshold_cal` (n=642) instead, so this script's own numbers (e.g. picking `msp` over `logit_margin` at 0.5B, `msp` over `normalized_entropy` at 1.5B) do not match Table 1's current selections; not itself cited by a paper number |
 | `python scripts/vision_subsample_at_judge_n.py` | stdout - the "1000 draws of vision's id_test down to n=642 reach p<0.05 in only 42%" power check |
 
 `data/judge_feature_cache_mtbench.pt` / `_1p5b.pt` / `_smollm2_360m.pt` back
@@ -111,7 +122,7 @@ here.
 | `python scripts/equivalence_test_tost.py` | stdout - **TOST equivalence test**, both margins (0.02-AUROC convention and own-MDE sensitivity), both configs |
 | `python scripts/failure_mode_table.py` | stdout - **Table 4 exactly**, all 6 cells (high-conf-wrong / low-conf-correct / high-disagreement × 0.5B/1.5B) |
 | `python scripts/collect_judge_swap_consistency.py`, `scripts/collect_judge_swap_consistency_1p5b.py` | `data/judge_swap_consistency_cache.pt`, `_1p5b.pt` (already cached; explicit order-swap test, both judge sizes) |
-| `python scripts/order_averaging_correction.py` | stdout - binary-verdict order-averaging (confirms it is uninformative: 1.09% swap-consistency at 0.5B, i.e. verdicts flip on 98.9% of pairs) |
+| `python scripts/order_averaging_correction.py` | stdout - binary-verdict order-averaging (confirms it is uninformative: 1.09% swap-consistency at 0.5B, i.e. verdicts flip on 98.9% of pairs); also prints the `id_test`-restricted Variant 3 (coin-flip) accuracy, 49.9%, matching Appendix A.6's "Order-averaging (0.5B judge)" citation |
 | `python scripts/collect_judge_swap_consistency_continuous.py` | `data/judge_swap_consistency_cache_continuous.pt` (already cached; re-runs the 0.5B swap test, additionally persisting `phi_swapped` so a genuine continuous order-average is computable) |
 | `python scripts/order_averaging_continuous_analysis.py` | stdout - **Table 5 exactly**: single-order 50.9% → two-pass order-averaged 64.0% (cluster-bootstrap 95% CI [59.0%, 68.7%], McNemar p=2.9×10⁻⁶) |
 | `python scripts/verbosity_and_swap_crosstab.py` | stdout Part A - the not-a-verbosity-shortcut check (predicted-winner-matches-longer-response ≈51.9%/51.0% vs. human label's own 70.8%, McNemar p<10⁻¹¹, both configs); Part B - swap-consistency crossed with the Table 4 failure modes |
@@ -133,9 +144,11 @@ every other table, rather than requiring manual reconstruction from the cache.
 | `python scripts/nonlinear_combiner_judge_task.py` | stdout - untuned GBT combiner AUROC/ECE vs. linear combiner, judge task |
 | `python scripts/gbt_seed_variance.py` | stdout - 5-seed variance for the GBT combiner on the three LLM backbones |
 | `python scripts/matched_subset_reslice.py` | stdout - re-slices Qwen's cache to SmolLM2's exact 23-question/400-row subset for an apples-to-apples comparison |
-| `python scripts/question_level_resplit.py` | stdout - split at the question level (32/8/40 of 80 questions, 546/121/617 rows): diff +0.055 (p=0.161) at 0.5B, −0.007 (p=0.169) at 1.5B |
+| `python scripts/question_level_resplit.py` | stdout - split at the question level (32/8/40 of 80 questions, 546/121/617 rows): diff +0.050 (p=0.051) at 0.5B, −0.007 (p=0.169) at 1.5B |
 | `python scripts/calibration_reliability_bins.py` | stdout - 10-bin reliability-diagram data underlying the ECE/Brier summary (0.35/0.32→0.02/0.05) |
 | `python scripts/selection_aware_bootstrap.py` | stdout - quantifies best-feature selection noise (Limitation iv), holding `id_test` fixed and resampling the calibration pool instead |
+| `python scripts/sixth_signal_cluster_check.py` | stdout - question-id cluster-bootstrap CI for the 5-vs-6-feature (adding swap-consistency) combiner AUROC gap at 1.5B: 0.673→0.728, cluster CI [0.030, 0.081], cluster-SE z-test p≈2.1×10⁻⁵ (naive row-level DeLong p=2.8×10⁻⁷, reported only as a secondary check since it assumes row independence) |
+| `python scripts/swap_consistency_auroc_ci_1p5b.py` | stdout - question-id cluster-bootstrap 95% CI for the standalone swap-consistency-vs-correctness AUROC at 1.5B: point 0.583, CI [0.551, 0.613], excluding chance |
 
 ## Reproducing a headline number (example)
 
