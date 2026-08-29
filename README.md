@@ -1,7 +1,7 @@
 # Code and cache archive
 
 This archive accompanies the anonymized submission "Beyond Scalar Confidence:
-Reliability Signals and Failure Modes in LLM-as-Judge Verdicts" (JUDGe 2026).
+A Reliability Framework for LLM-as-Judge Verdicts" (JUDGe 2026).
 It contains every named script and cached tensor referenced in the paper's
 Reproducibility paragraph, sufficient to reproduce every reported number from
 the provided caches without rerunning model inference.
@@ -24,7 +24,7 @@ historical/superseded rather than describing Table 1's current protocol.
 ## Structure
 
 ```
-scripts/     Analysis and data-collection scripts (64 files)
+scripts/     Analysis and data-collection scripts (65 files)
 src/         The `deployment_reliability` package: signal extraction (Phi),
              combiner (G_w), router (R_tau), calibration, significance tests
 tests/       Unit tests for src/deployment_reliability
@@ -151,6 +151,7 @@ every other table, rather than requiring manual reconstruction from the cache.
 | `python scripts/selection_aware_bootstrap.py` | stdout - quantifies best-feature selection noise (Limitation iv), holding `id_test` fixed and resampling the calibration pool instead |
 | `python scripts/sixth_signal_cluster_check.py` | stdout - question-id cluster-bootstrap CI for the 5-vs-6-feature (adding swap-consistency) combiner AUROC gap at 1.5B: 0.673→0.728, cluster CI [0.030, 0.081], cluster-SE z-test p≈2.1×10⁻⁵ (naive row-level DeLong p=2.8×10⁻⁷, reported only as a secondary check since it assumes row independence) |
 | `python scripts/swap_consistency_auroc_ci_1p5b.py` | stdout - question-id cluster-bootstrap 95% CI for the standalone swap-consistency-vs-correctness AUROC at 1.5B: point 0.583, CI [0.551, 0.613], excluding chance |
+| `python scripts/swap_consistency_single_auroc_significance_0p5b.py` | stdout - single-sample DeLong significance test (H0: AUROC=0.5) for the standalone swap-consistency-vs-correctness AUROC at 0.5B (same full-pool data/point-estimate `judge_characterization.py` section E(iii) already reports, 0.503): z=0.97, p=0.33 - the paper's "as a sixth signal" non-significance claim at 0.5B |
 
 ## Reproducing a headline number (example)
 
