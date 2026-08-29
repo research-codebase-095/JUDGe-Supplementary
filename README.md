@@ -24,7 +24,7 @@ historical/superseded rather than describing Table 1's current protocol.
 ## Structure
 
 ```
-scripts/     Analysis and data-collection scripts (62 files)
+scripts/     Analysis and data-collection scripts (64 files)
 src/         The `deployment_reliability` package: signal extraction (Phi),
              combiner (G_w), router (R_tau), calibration, significance tests
 tests/       Unit tests for src/deployment_reliability
@@ -125,6 +125,7 @@ here.
 | `python scripts/order_averaging_correction.py` | stdout - binary-verdict order-averaging (confirms it is uninformative: 1.09% swap-consistency at 0.5B, i.e. verdicts flip on 98.9% of pairs); also prints the `id_test`-restricted Variant 3 (coin-flip) accuracy, 49.9%, matching Appendix A.6's "Order-averaging (0.5B judge)" citation |
 | `python scripts/collect_judge_swap_consistency_continuous.py` | `data/judge_swap_consistency_cache_continuous.pt` (already cached; re-runs the 0.5B swap test, additionally persisting `phi_swapped` so a genuine continuous order-average is computable) |
 | `python scripts/order_averaging_continuous_analysis.py` | stdout - **Table 5 exactly**: single-order 50.9% → two-pass order-averaged 64.0% (cluster-bootstrap 95% CI [59.0%, 68.7%], McNemar p=2.9×10⁻⁶) |
+| `python scripts/order_averaging_auroc_check.py` | stdout - the AUROC side of Table 5's order-averaging result (0.5B judge, `id_test`, n=642): single-order MSP AUROC 0.5522 (cluster CI [0.5005, 0.6061]) → two-pass averaged-confidence AUROC 0.6454 (cluster CI [0.5948, 0.6995]); paired cluster-bootstrap on the gap gives CI [0.0313, 0.1567], frac(gap>0)=0.999 - confirms the intervention improves discrimination, not just threshold-0.5 accuracy |
 | `python scripts/verbosity_and_swap_crosstab.py` | stdout Part A - the not-a-verbosity-shortcut check (predicted-winner-matches-longer-response ≈51.9%/51.0% vs. human label's own 70.8%, McNemar p<10⁻¹¹, both configs); Part B - swap-consistency crossed with the Table 4 failure modes |
 
 `scripts/order_averaging_continuous_analysis.py` is new in this release: it
@@ -138,6 +139,7 @@ every other table, rather than requiring manual reconstruction from the cache.
 | Command | Output |
 |---|---|
 | `python scripts/inter_annotator_agreement.py` | stdout - 274/351=78.1% item-level agreement, 633/772=82.0% pairwise agreement |
+| `python scripts/majority_label_robustness_check.py` | stdout - re-labels the 351-key multiply-annotated subset (same overlap data as `inter_annotator_agreement.py`) with a majority vote instead of the single-annotator label, then re-checks the combiner-vs-best-signal AUROC gap on the `id_test` rows that fall in it (n=391 of 642): +0.0300 at 0.5B (DeLong p=0.086) vs. +0.0309 on the same subset's original single-annotator label; −0.0100 at 1.5B (p=0.244) vs. −0.0053 original - gap direction/magnitude essentially unchanged, so the null result is not an artifact of single-annotator label noise |
 | `python scripts/stability_across_splits.py` | stdout - 5-reseed combiner-vs-MSP stability, LLM and judge backbones |
 | `python scripts/vision_seed_stability.py` | stdout - same 5-reseed treatment applied to the vision row specifically |
 | `python scripts/power_analysis.py` | stdout - minimum detectable effect at 80% power: 0.036 (0.5B) / 0.018 (1.5B) |
