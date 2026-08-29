@@ -58,7 +58,6 @@ from deployment_reliability.combiner import LogisticRegressionCombiner  # noqa: 
 from deployment_reliability.features import (  # noqa: E402
     DEFAULT_FEATURE_DIRECTIONS,
     DEFAULT_FEATURE_NAMES,
-    verify_feature_directions,
 )
 from deployment_reliability.router import auroc  # noqa: E402
 
@@ -112,10 +111,13 @@ def analyze(name: str, path: str) -> dict:
     # Combiner vs. best single feature: bootstrap-stabilized selection over
     # pooled combiner_fit+threshold_cal (matching Table 1's protocol exactly
     # -- scripts/judge_characterization.py's best_single_feature()), not a
-    # single draw on threshold_cal alone.
-    best_name = bootstrap_stabilized_direction_and_best_feature(config)["stabilized_best"]
-    d_test = verify_feature_directions(phi_test, correct_test)
-    sign_test = 1.0 if d_test[best_name] else -1.0
+    # single draw on threshold_cal alone. Oriented by the SAME pooled
+    # bootstrap-stabilized sign used for selection (result["stabilized_sign"]),
+    # not a fresh verify_feature_directions call on id_test itself, which
+    # would let id_test's own labels influence the reported flip rate.
+    result = bootstrap_stabilized_direction_and_best_feature(config)
+    best_name = result["stabilized_best"]
+    sign_test = result["stabilized_sign"][best_name]
     idx = DEFAULT_FEATURE_NAMES.index(best_name)
     best_col = (phi_test[:, idx] * DEFAULT_FEATURE_DIRECTIONS[idx].item() * sign_test).numpy()
 

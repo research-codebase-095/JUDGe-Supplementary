@@ -215,22 +215,27 @@ def oriented_pooled(config: dict) -> torch.Tensor:
 def best_single_feature(config: dict) -> tuple[str, torch.Tensor]:
     """Selects the best feature via a bootstrap-majority vote over the pooled
     combiner_fit+threshold_cal data (see bootstrap_stabilized_direction_and_best_feature),
-    then returns that SAME feature's id_test scores, oriented by id_test's own
-    verified direction (id_test is large enough at every judge config,
-    200-642, that this final orientation step is not the small-n problem the
-    selection-source fix above addresses) -- the disjoint selection/reporting
-    protocol Table 1 and Section 4 use throughout. This replaced two earlier
-    versions: in-sample selection on id_test itself (disagreed with Table 1 at
-    a near-tie, entropy vs. MSP at Qwen2.5-1.5B-judge), and single-draw
-    selection on threshold_cal alone (unstable at n=40/128 -- see
-    pooled_calibration's docstring)."""
+    then returns that SAME feature's id_test scores, oriented by the SAME
+    pooled bootstrap-stabilized direction used for selection (result["stabilized_sign"],
+    already computed above -- not a fresh verify_feature_directions call on
+    id_test itself) -- the disjoint selection/reporting protocol Table 1 and
+    Section 4 use throughout, now fully disjoint from id_test at every step,
+    matching oriented_pooled()'s approach (used for Table 3). This replaced
+    three earlier versions: in-sample selection on id_test itself (disagreed
+    with Table 1 at a near-tie, entropy vs. MSP at Qwen2.5-1.5B-judge),
+    single-draw selection on threshold_cal alone (unstable at n=40/128 -- see
+    pooled_calibration's docstring), and orienting the selected feature via a
+    fresh verify_feature_directions(config["phi"], config["correct"]) call on
+    id_test -- which, while defensible at every judge config's id_test size
+    (200-642), still let this one final step see id_test's own labels before
+    the id_test AUROC computed from it was reported, cracking the
+    full-disjointness claim."""
     result = bootstrap_stabilized_direction_and_best_feature(config)
     best_name = result["stabilized_best"]
 
-    d_test = verify_feature_directions(config["phi"], config["correct"])
-    sign_test = 1.0 if d_test[best_name] else -1.0
+    sign = result["stabilized_sign"][best_name]
     idx = DEFAULT_FEATURE_NAMES.index(best_name)
-    best_col = config["phi"][:, idx] * DEFAULT_FEATURE_DIRECTIONS[idx].item() * sign_test
+    best_col = config["phi"][:, idx] * DEFAULT_FEATURE_DIRECTIONS[idx].item() * sign
     return best_name, best_col
 
 

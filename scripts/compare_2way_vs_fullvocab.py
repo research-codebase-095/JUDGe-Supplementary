@@ -39,7 +39,6 @@ from deployment_reliability.combiner import LogisticRegressionCombiner  # noqa: 
 from deployment_reliability.features import (  # noqa: E402
     DEFAULT_FEATURE_DIRECTIONS,
     DEFAULT_FEATURE_NAMES,
-    verify_feature_directions,
 )
 from deployment_reliability.router import auroc  # noqa: E402
 from deployment_reliability.significance import delong_test  # noqa: E402
@@ -77,19 +76,21 @@ def best_single_feature_on_cal(config: dict):
     """Selects the best feature via the bootstrap-stabilized majority vote
     over pooled combiner_fit+threshold_cal (judge_characterization.py's
     bootstrap_stabilized_direction_and_best_feature), then scores that SAME
-    feature on id_test using id_test's own correct orientation - matches
-    judge2026.tex's disjoint-selection protocol (Table 1), not a single draw
-    on threshold_cal alone."""
+    feature on id_test, oriented by the SAME pooled bootstrap-stabilized
+    direction used for selection (result["stabilized_sign"], not a fresh
+    verify_feature_directions call on id_test itself, which would let
+    id_test's own labels influence the reported AUROC's sign) - matches
+    judge2026.tex's disjoint-selection protocol (Table 1) and
+    judge_characterization.best_single_feature()."""
     result = bootstrap_stabilized_direction_and_best_feature(config)
     best_name = result["stabilized_best"]
+    sign = result["stabilized_sign"][best_name]
     phi_test, correct_test = config["phi"], config["correct"]
-    d_test = verify_feature_directions(phi_test, correct_test)
-    sign_test = 1.0 if d_test[best_name] else -1.0
     idx = DEFAULT_FEATURE_NAMES.index(best_name)
-    col_test = phi_test[:, idx] * DEFAULT_FEATURE_DIRECTIONS[idx].item() * sign_test
+    col_test = phi_test[:, idx] * DEFAULT_FEATURE_DIRECTIONS[idx].item() * sign
     correct_test_bool = correct_test.bool()
     best_auroc = auroc(col_test[correct_test_bool], col_test[~correct_test_bool])
-    return best_name, best_auroc
+    return best_name, best_auroc, col_test
 
 
 def analyze(name: str, config: dict) -> dict:
@@ -98,7 +99,7 @@ def analyze(name: str, config: dict) -> dict:
     correct_test_bool = correct_test.bool()
     msp_auroc = auroc(msp_test[correct_test_bool], msp_test[~correct_test_bool])
 
-    best_name, best_auroc = best_single_feature_on_cal(config)
+    best_name, best_auroc, best_scores = best_single_feature_on_cal(config)
 
     combiner = LogisticRegressionCombiner().fit(config["phi_fit"], config["correct_fit"].float())
     comb_scores = combiner.score(phi_test)
@@ -108,11 +109,10 @@ def analyze(name: str, config: dict) -> dict:
 
     # Combiner-vs-best-feature DeLong test (Table 1's actual headline
     # comparison, not combiner-vs-MSP -- best feature differs from MSP at
-    # some configs, e.g. SmolLM2's logit_l2_norm).
-    idx_best = DEFAULT_FEATURE_NAMES.index(best_name)
-    d_test = verify_feature_directions(phi_test, correct_test)
-    sign_best = 1.0 if d_test[best_name] else -1.0
-    best_scores = phi_test[:, idx_best] * DEFAULT_FEATURE_DIRECTIONS[idx_best].item() * sign_best
+    # some configs, e.g. SmolLM2's logit_l2_norm). Reuses best_scores from
+    # best_single_feature_on_cal above (pooled bootstrap-stabilized
+    # orientation) rather than a second fresh verify_feature_directions call
+    # on id_test.
     dl_best = delong_test(correct_test, comb_scores, best_scores)
 
     phi_test_c = oriented_pooled(config)

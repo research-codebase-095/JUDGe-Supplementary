@@ -109,19 +109,20 @@ def main() -> None:
                   f"stabilized sign: {result['stabilized_sign'][f]:+.0f}")
         print(f"  STABILIZED BEST FEATURE: {result['stabilized_best']}")
 
-        # Score the stabilized best feature on id_test, using id_test's own
-        # verify_feature_directions for the id_test-side orientation (id_test
-        # is large enough -- 200-642 -- that this is not the same small-n
-        # problem; only the SELECTION source was replaced, not the disjoint
-        # selection-then-score protocol itself).
-        d_test = verify_feature_directions(phi_test, correct_test)
+        # Score the stabilized best feature on id_test, oriented by the SAME
+        # pooled bootstrap-stabilized sign already computed above for
+        # selection (result["stabilized_sign"]) -- not a fresh
+        # verify_feature_directions call on id_test itself, which would let
+        # id_test's own labels influence the sign of the number id_test is
+        # then used to compute (see judge_characterization.py's
+        # best_single_feature() for the same fix applied there first).
         best_name = result["stabilized_best"]
         idx = DEFAULT_FEATURE_NAMES.index(best_name)
-        sign_test = 1.0 if d_test[best_name] else -1.0
+        sign_test = result["stabilized_sign"][best_name]
         best_col = phi_test[:, idx] * DEFAULT_FEATURE_DIRECTIONS[idx].item() * sign_test
         correct_test_bool = correct_test.bool()
         best_auroc = auroc(best_col[correct_test_bool], best_col[~correct_test_bool])
-        print(f"  {best_name} AUROC on id_test (stabilized selection, id_test's own orientation): {best_auroc:.4f}")
+        print(f"  {best_name} AUROC on id_test (stabilized selection, pooled bootstrap-stabilized orientation): {best_auroc:.4f}")
         print()
 
 

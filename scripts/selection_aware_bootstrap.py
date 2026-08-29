@@ -72,11 +72,16 @@ def selection_aware_gaps(config: dict, n_bootstrap: int = N_BOOTSTRAP, seed: int
         best_name = max(aurocs_b, key=aurocs_b.get)
         chosen.append(best_name)
 
-        # score THIS draw's selected feature on the fixed id_test, using
-        # id_test's own verified direction (same final step best_single_feature() uses)
-        d_test = verify_feature_directions(config["phi"], config["correct"])
-        sign_test = 1.0 if d_test[best_name] else -1.0
+        # score THIS draw's selected feature on the fixed id_test, oriented by
+        # THIS SAME draw's pooled bootstrap-derived sign (signs_b, computed
+        # above from the resampled cal pool) -- not a fresh
+        # verify_feature_directions call on id_test itself, which would let
+        # id_test's own labels influence the sign of the number id_test is
+        # then used to compute. Must be the per-draw sign, not a single
+        # global sign, so that this function's per-draw selection-variance
+        # tracking stays intact.
         idx_feat = DEFAULT_FEATURE_NAMES.index(best_name)
+        sign_test = signs_b[idx_feat].item()
         best_col_test = config["phi"][:, idx_feat] * DEFAULT_FEATURE_DIRECTIONS[idx_feat].item() * sign_test
         best_auroc_test = auroc(best_col_test[correct_test_bool], best_col_test[~correct_test_bool])
         gaps.append(comb_auroc - best_auroc_test)
