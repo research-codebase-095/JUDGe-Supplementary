@@ -21,6 +21,19 @@ bootstrap-stabilized sign instead of a fresh `id_test`-based direction call):
 `best_feature_selected_on_cal.py`'s table description was relabeled as
 historical/superseded rather than describing Table 1's current protocol.
 
+## Quickstart
+
+```bash
+pip install -r requirements.txt
+python scripts/judge_characterization.py
+```
+
+Reproduces the paper's central comparison (Table 1/2's judge rows: MSP,
+best-single-signal, and combiner AUROC via question-id cluster-bootstrap CI,
+all 3 judge configs including the non-confirmatory SmolLM2-360M row) from the
+already-cached `data/*.pt` tensors, no model inference required. See the
+per-table mapping below for every other number in the paper.
+
 ## Structure
 
 ```
